@@ -102,4 +102,15 @@ class DatabaseHelper {
     );
     return maps.map((map) => ChatMessage.fromMap(map)).toList();
   }
+
+  // Fungsi baru: Update judul sesi (Auto-Title)
+  Future<void> updateSessionTitle(String sessionId, String newTitle) async {
+    final db = await database;
+    await db.update(
+      'sessions',
+      {'title': newTitle},
+      where: 'id = ?',
+      whereArgs: [sessionId],
+    );
+  }
 }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:local_mind/business_logic/session_bloc/session_bloc.dart';
+import 'package:local_mind/business_logic/session_bloc/session_event.dart';
 import '../../business_logic/chat_bloc/chat_bloc.dart';
 import '../../business_logic/chat_bloc/chat_event.dart';
 import '../../business_logic/chat_bloc/chat_state.dart';
@@ -175,10 +177,12 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
       SendMessageEvent(
         text: _textController.text,
         modelName: _currentModel,
-        sessionId:
-            _currentSessionId!, // Pakai tanda ! karena kita yakin tidak null
+        sessionId: _currentSessionId!,
       ),
     );
+
+    // ✅ SURUH RESEPSIONIS REFRESH SIDEBAR SETELAH KIRIM PESAN
+    context.read<SessionBloc>().add(LoadAllSessions());
 
     _textController.clear();
   }

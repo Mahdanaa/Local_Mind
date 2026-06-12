@@ -12,13 +12,21 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final _uuid = const Uuid();
 
   ChatBloc(this._repository, this._dbHelper) : super(ChatInitial()) {
+    // ATURAN 1: Kalau ada pesan masuk (Termasuk Auto-Title)
     on<SendMessageEvent>((event, emit) async {
-      // 1. Ambil riwayat chat lama dari Brankas
       final existingMessages = await _dbHelper.getMessagesBySession(
         event.sessionId,
       );
 
-      // 2. Bikin pesan user & simpan
+      // LOGIKA AUTO-TITLE
+      if (existingMessages.isEmpty) {
+        String generatedTitle = event.text.length > 30
+            ? '${event.text.substring(0, 30)}...'
+            : event.text;
+
+        await _dbHelper.updateSessionTitle(event.sessionId, generatedTitle);
+      }
+
       final userMsg = ChatMessage(
         id: _uuid.v4(),
         sessionId: event.sessionId,
@@ -26,25 +34,22 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         content: event.text,
       );
       await _dbHelper.insertMessage(userMsg);
-      existingMessages.add(userMsg); // Tambahkan ke daftar tampilan
+      existingMessages.add(userMsg);
 
-      emit(ChatLoading(existingMessages)); // Tampilkan UI loading
+      emit(ChatLoading(existingMessages));
 
       try {
         final stream = _repository.streamChat(event.text, event.modelName);
         String fullAiResponse = "";
 
-        // 3. Streaming kata per kata
         await emit.forEach(
           stream,
           onData: (String chunk) {
             fullAiResponse += chunk;
-            // Kirim riwayat lama + teks yang lagi diketik AI
             return ChatStreaming(existingMessages, fullAiResponse);
           },
         );
 
-        // 4. Selesai ngetik, simpan pesan AI
         final aiMsg = ChatMessage(
           id: _uuid.v4(),
           sessionId: event.sessionId,
@@ -54,24 +59,24 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         await _dbHelper.insertMessage(aiMsg);
         existingMessages.add(aiMsg);
 
-        // 5. Berhasil! Tampilkan semua riwayat
         emit(ChatSuccess(existingMessages));
       } catch (e) {
         emit(ChatError(existingMessages, e.toString()));
       }
     });
 
+    // ATURAN 2: Kalau user klik Stop
     on<StopGenerationEvent>((event, emit) {
       _repository.cancelGeneration();
-      emit(ChatSuccess(state.messages)); // Tetap pertahankan chat yang ada
+      emit(ChatSuccess(state.messages));
     });
 
-    // ATURAN 3: Kalau user pindah ruang chat, muat riwayat lamanya
+    // ATURAN 3: Kalau user pindah meja (Load History)
     on<LoadChatHistory>((event, emit) async {
-      emit(ChatLoading([])); // Kosongkan meja sementara loading
+      emit(ChatLoading([]));
       try {
         final messages = await _dbHelper.getMessagesBySession(event.sessionId);
-        emit(ChatSuccess(messages)); // Taruh piring pesan lama ke meja
+        emit(ChatSuccess(messages));
       } catch (e) {
         emit(ChatError(state.messages, e.toString()));
       }
