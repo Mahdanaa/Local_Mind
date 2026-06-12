@@ -97,8 +97,7 @@ class DatabaseHelper {
       'messages',
       where: 'session_id = ?',
       whereArgs: [sessionId],
-      orderBy:
-          'id ASC', // Asumsi ID mengandung urutan/waktu, atau bisa tambah field created_at di pesan
+      orderBy: 'rowid ASC', //  Sekarang diurutkan pas insertion order!
     );
     return maps.map((map) => ChatMessage.fromMap(map)).toList();
   }
