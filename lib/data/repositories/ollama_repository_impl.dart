@@ -31,10 +31,17 @@ class OllamaRepositoryImpl implements LlmRepository {
     request.headers['Content-Type'] = 'application/json';
 
     // Pesanan yang mau dikirim ke dapur
+    // Pesanan yang mau dikirim ke dapur
     request.body = jsonEncode({
       'model': model,
       'prompt': prompt,
       'stream': true,
+      // TAMBAHAN: Kita bisa nyelipin prompt sistem di sini
+      // Sayangnya untuk endpoint /api/generate sederhana di Ollama,
+      // system prompt efektifnya digabung di pesan atau pakai /api/chat.
+      // Untuk MVP ini, Ollama otomatis mengenali parameter 'system' di endpoint generate!
+      'system':
+          'Kamu adalah asisten AI yang membantu. (Nanti nilainya diambil dari database)',
     });
 
     try {

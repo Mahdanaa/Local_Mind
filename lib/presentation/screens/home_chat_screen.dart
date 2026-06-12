@@ -170,9 +170,9 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
   }
 
   void _sendMessage() {
-    if (_textController.text.trim().isEmpty || _currentSessionId == null)
+    if (_textController.text.trim().isEmpty || _currentSessionId == null) {
       return;
-
+    }
     context.read<ChatBloc>().add(
       SendMessageEvent(
         text: _textController.text,

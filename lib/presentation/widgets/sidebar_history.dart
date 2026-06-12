@@ -5,7 +5,7 @@ import '../../business_logic/session_bloc/session_event.dart';
 import '../../business_logic/session_bloc/session_state.dart';
 
 class SidebarHistory extends StatelessWidget {
-  final Function(String) onSessionSelected; // Fungsi saat history di-klik
+  final Function(String) onSessionSelected;
 
   const SidebarHistory({super.key, required this.onSessionSelected});
 
@@ -13,20 +13,13 @@ class SidebarHistory extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 1. Tombol Bikin Chat Baru
+        // 1. Tombol Bikin Chat Baru (Sekarang Nampilin Popup)
         Container(
           padding: const EdgeInsets.all(16),
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () {
-              // Menyuruh resepsionis bikin sesi baru di database
-              context.read<SessionBloc>().add(
-                CreateNewSession(
-                  title: 'Obrolan Baru',
-                  systemPrompt: 'Kamu adalah asisten AI yang pintar.',
-                ),
-              );
-            },
+            onPressed: () =>
+                _showSystemPromptDialog(context), // Panggil fungsi popup
             icon: const Icon(Icons.add),
             label: const Text('New Chat'),
             style: ElevatedButton.styleFrom(
@@ -50,7 +43,6 @@ class SidebarHistory extends StatelessWidget {
                   return const Center(child: Text('Belum ada riwayat.'));
                 }
 
-                // Menampilkan daftar sesi dari yang terbaru
                 return ListView.builder(
                   itemCount: state.sessions.length,
                   itemBuilder: (context, index) {
@@ -62,9 +54,7 @@ class SidebarHistory extends StatelessWidget {
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      onTap: () => onSessionSelected(
-                        session.id,
-                      ), // Lapor ke layar utama!
+                      onTap: () => onSessionSelected(session.id),
                     );
                   },
                 );
@@ -77,6 +67,57 @@ class SidebarHistory extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+
+  // ==========================================
+  // FUNGSI POPUP BUKU KARAKTER
+  // ==========================================
+  void _showSystemPromptDialog(BuildContext context) {
+    final TextEditingController promptController = TextEditingController();
+
+    // Nilai default biar user nggak wajib ngisi
+    promptController.text =
+        'Kamu adalah asisten AI yang pintar dan sangat membantu.';
+
+    showDialog(
+      context: context,
+      builder: (dialogContext) {
+        return AlertDialog(
+          title: const Text('Karakter AI (System Prompt)'),
+          content: TextField(
+            controller: promptController,
+            maxLines: 3,
+            decoration: const InputDecoration(
+              hintText: 'Misal: Jawablah dengan gaya anak Jaksel...',
+              border: OutlineInputBorder(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(dialogContext), // Batal
+              child: const Text('Batal'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // Suruh resepsionis bikin sesi baru dengan karakter ini
+                context.read<SessionBloc>().add(
+                  CreateNewSession(
+                    title: 'Obrolan Baru',
+                    systemPrompt: promptController.text,
+                  ),
+                );
+                Navigator.pop(dialogContext); // Tutup popup
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.teal,
+                foregroundColor: Colors.white,
+              ),
+              child: const Text('Mulai Chat'), // INI DIA YANG TADI HILANG SOB!
+            ),
+          ],
+        );
+      },
     );
   }
 }
