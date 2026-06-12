@@ -12,13 +12,12 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final _uuid = const Uuid();
 
   ChatBloc(this._repository, this._dbHelper) : super(ChatInitial()) {
-    // ATURAN 1: Kalau ada pesan masuk (Termasuk Auto-Title)
     on<SendMessageEvent>((event, emit) async {
       final existingMessages = await _dbHelper.getMessagesBySession(
         event.sessionId,
       );
 
-      // LOGIKA AUTO-TITLE
+      // 1. AUTO-TITLE
       if (existingMessages.isEmpty) {
         String generatedTitle = event.text.length > 30
             ? '${event.text.substring(0, 30)}...'
@@ -27,6 +26,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         await _dbHelper.updateSessionTitle(event.sessionId, generatedTitle);
       }
 
+      // 2. SIMPAN PESAN USER
       final userMsg = ChatMessage(
         id: _uuid.v4(),
         sessionId: event.sessionId,
@@ -39,9 +39,20 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       emit(ChatLoading(existingMessages));
 
       try {
-        final stream = _repository.streamChat(event.text, event.modelName);
+        // ✅ 3. NGINTIP KARAKTER DARI BRANKAS
+        final sessionInfo = await _dbHelper.getSessionById(event.sessionId);
+        final karakterAi = sessionInfo?.systemPrompt;
+
+        // ✅ 4. KASIH KARAKTERNYA KE KURIR AI
+        final stream = _repository.streamChat(
+          event.text,
+          event.modelName,
+          systemPrompt: karakterAi, // Berikan karakternya ke Ollama!
+        );
+
         String fullAiResponse = "";
 
+        // 5. STREAMING BALASAN AI
         await emit.forEach(
           stream,
           onData: (String chunk) {
@@ -50,6 +61,7 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           },
         );
 
+        // 6. SIMPAN PESAN AI
         final aiMsg = ChatMessage(
           id: _uuid.v4(),
           sessionId: event.sessionId,
@@ -65,13 +77,11 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       }
     });
 
-    // ATURAN 2: Kalau user klik Stop
     on<StopGenerationEvent>((event, emit) {
       _repository.cancelGeneration();
       emit(ChatSuccess(state.messages));
     });
 
-    // ATURAN 3: Kalau user pindah meja (Load History)
     on<LoadChatHistory>((event, emit) async {
       emit(ChatLoading([]));
       try {

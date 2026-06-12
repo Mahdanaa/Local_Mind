@@ -113,4 +113,19 @@ class DatabaseHelper {
       whereArgs: [sessionId],
     );
   }
+
+  // ✅ Fungsi Baru: Ngintip karakter AI di meja tertentu
+  Future<ChatSession?> getSessionById(String sessionId) async {
+    final db = await database;
+    final maps = await db.query(
+      'sessions',
+      where: 'id = ?',
+      whereArgs: [sessionId],
+    );
+
+    if (maps.isNotEmpty) {
+      return ChatSession.fromMap(maps.first);
+    }
+    return null; // Kalau mejanya nggak ketemu
+  }
 }
