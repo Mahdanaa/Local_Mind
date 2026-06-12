@@ -5,21 +5,40 @@ import '../../business_logic/session_bloc/session_event.dart';
 import '../../business_logic/session_bloc/session_state.dart';
 
 class SidebarHistory extends StatelessWidget {
+  final String? currentSessionId; // ✅ MODIFIKASI: Tahu meja mana yang aktif
   final Function(String) onSessionSelected;
 
-  const SidebarHistory({super.key, required this.onSessionSelected});
+  const SidebarHistory({
+    super.key,
+    required this.currentSessionId, // ✅ Wajib diisi dari layar utama
+    required this.onSessionSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        // 1. Tombol Bikin Chat Baru (Sekarang Nampilin Popup)
+        // 1. Tombol Bikin Chat Baru
         Container(
           padding: const EdgeInsets.all(16),
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () =>
-                _showSystemPromptDialog(context), // Panggil fungsi popup
+            onPressed: () {
+              context.read<SessionBloc>().add(
+                CreateNewSession(
+                  title: 'Obrolan Baru',
+                  systemPrompt:
+                      'Kamu adalah asisten AI yang pintar dan sangat membantu.',
+                ),
+              );
+
+              Future.delayed(const Duration(milliseconds: 200), () {
+                final state = context.read<SessionBloc>().state;
+                if (state is SessionLoaded && state.sessions.isNotEmpty) {
+                  onSessionSelected(state.sessions.first.id);
+                }
+              });
+            },
             icon: const Icon(Icons.add),
             label: const Text('New Chat'),
             style: ElevatedButton.styleFrom(
@@ -44,17 +63,51 @@ class SidebarHistory extends StatelessWidget {
                 }
 
                 return ListView.builder(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 8,
+                  ),
                   itemCount: state.sessions.length,
                   itemBuilder: (context, index) {
                     final session = state.sessions[index];
-                    return ListTile(
-                      leading: const Icon(Icons.chat_bubble_outline),
-                      title: Text(
-                        session.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+
+                    // ✅ MODIFIKASI LOGIKA: Cek apakah item ini yang lagi dipilih?
+                    final bool isSelected = session.id == currentSessionId;
+
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 2.0),
+                      child: ListTile(
+                        // Kasih background warna blok teal tipis kalau dipilih
+                        tileColor: isSelected
+                            ? Colors.teal.withOpacity(0.12)
+                            : null,
+                        // Bikin sudut blok-nya agak melengkung biar aesthetic mirip Notion/ChatGPT
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        // Icon-nya ikutan berubah warna dan bentuk
+                        leading: Icon(
+                          isSelected
+                              ? Icons.chat_bubble
+                              : Icons.chat_bubble_outline,
+                          color: isSelected ? Colors.teal : Colors.grey[600],
+                        ),
+                        // Judul teksnya ditebalkan kalau aktif
+                        title: Text(
+                          session.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: isSelected
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isSelected
+                                ? Colors.teal[800]
+                                : Colors.black87,
+                          ),
+                        ),
+                        onTap: () => onSessionSelected(session.id),
                       ),
-                      onTap: () => onSessionSelected(session.id),
                     );
                   },
                 );
@@ -67,57 +120,6 @@ class SidebarHistory extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-
-  // ==========================================
-  // FUNGSI POPUP BUKU KARAKTER
-  // ==========================================
-  void _showSystemPromptDialog(BuildContext context) {
-    final TextEditingController promptController = TextEditingController();
-
-    // Nilai default biar user nggak wajib ngisi
-    promptController.text =
-        'Kamu adalah asisten AI yang pintar dan sangat membantu.';
-
-    showDialog(
-      context: context,
-      builder: (dialogContext) {
-        return AlertDialog(
-          title: const Text('Karakter AI (System Prompt)'),
-          content: TextField(
-            controller: promptController,
-            maxLines: 3,
-            decoration: const InputDecoration(
-              hintText: 'Misal: Jawablah dengan gaya anak Jaksel...',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext), // Batal
-              child: const Text('Batal'),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                // Suruh resepsionis bikin sesi baru dengan karakter ini
-                context.read<SessionBloc>().add(
-                  CreateNewSession(
-                    title: 'Obrolan Baru',
-                    systemPrompt: promptController.text,
-                  ),
-                );
-                Navigator.pop(dialogContext); // Tutup popup
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.teal,
-                foregroundColor: Colors.white,
-              ),
-              child: const Text('Mulai Chat'), // INI DIA YANG TADI HILANG SOB!
-            ),
-          ],
-        );
-      },
     );
   }
 }

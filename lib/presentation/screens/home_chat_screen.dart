@@ -18,8 +18,6 @@ class HomeChatScreen extends StatefulWidget {
 class _HomeChatScreenState extends State<HomeChatScreen> {
   final TextEditingController _textController = TextEditingController();
   final String _currentModel = 'qwen2.5:0.5b';
-
-  // Sekarang ID Sesi bisa berubah-ubah, jadi kita pakai null di awal
   String? _currentSessionId;
 
   @override
@@ -33,13 +31,15 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
           Expanded(
             flex: 2,
             child: Container(
-              color: Colors.grey[100],
+              color: Colors
+                  .grey[50], // Diperlembut warnanya biar blok teal-nya kontras
               child: SidebarHistory(
+                currentSessionId:
+                    _currentSessionId, // ✅ SEKARANG DIKIRIM KE SIDEBAR
                 onSessionSelected: (String sessionId) {
                   setState(() {
-                    _currentSessionId = sessionId; // Update meja aktif
+                    _currentSessionId = sessionId;
                   });
-                  // Suruh manajer ambil riwayat chat di meja ini
                   context.read<ChatBloc>().add(LoadChatHistory(sessionId));
                 },
               ),
@@ -53,7 +53,6 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
           // ==========================
           Expanded(
             flex: 5,
-            // Kalau belum milih room chat, sembunyikan area chat-nya
             child: _currentSessionId == null
                 ? const Center(
                     child: Text('👈 Pilih atau buat obrolan baru di sidebar'),
@@ -138,11 +137,9 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                             // 3. TOMBOL DINAMIS (Bisa Kirim, Bisa Stop)
                             BlocBuilder<ChatBloc, ChatState>(
                               builder: (context, state) {
-                                // Cek apakah AI lagi ngetik?
                                 bool isStreaming = state is ChatStreaming;
 
                                 return FloatingActionButton(
-                                  // Kalau lagi ngetik, tombol ini jadi rem. Kalau nggak, jadi pengirim pesan.
                                   onPressed: isStreaming
                                       ? () => context.read<ChatBloc>().add(
                                           StopGenerationEvent(),
@@ -173,6 +170,7 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
     if (_textController.text.trim().isEmpty || _currentSessionId == null) {
       return;
     }
+
     context.read<ChatBloc>().add(
       SendMessageEvent(
         text: _textController.text,
@@ -181,9 +179,7 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
       ),
     );
 
-    // ✅ SURUH RESEPSIONIS REFRESH SIDEBAR SETELAH KIRIM PESAN
     context.read<SessionBloc>().add(LoadAllSessions());
-
     _textController.clear();
   }
 }
