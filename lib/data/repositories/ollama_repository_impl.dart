@@ -17,7 +17,6 @@ class OllamaRepositoryImpl implements LlmRepository {
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         final List models = data['models'];
-        // Mengambil nama model (contoh: "qwen2.5:0.5b")
         return models.map((m) => m['name'] as String).toList();
       }
       throw OllamaOfflineException();
@@ -35,7 +34,7 @@ class OllamaRepositoryImpl implements LlmRepository {
     request.body = jsonEncode({
       'model': model,
       'prompt': prompt,
-      'stream': true, // Penting! Meminta jawaban dikirim kata per kata
+      'stream': true,
     });
 
     try {
@@ -47,12 +46,13 @@ class OllamaRepositoryImpl implements LlmRepository {
         for (var line in lines) {
           final data = jsonDecode(line);
           if (data.containsKey('response')) {
-            yield data['response'] as String; // Pancarkan katanya ke UI
+            yield data['response'] as String;
           }
         }
       }
     } catch (e) {
-      throw OllamaOfflineException('Koneksi terputus saat AI sedang mengetik.');
+      // ✅ PESANNYA KITA UBAH DI SINI SOB!
+      throw OllamaOfflineException('Anda memberhentikan jawaban.');
     }
   }
 

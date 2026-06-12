@@ -4,7 +4,7 @@ import '../../business_logic/chat_bloc/chat_bloc.dart';
 import '../../business_logic/chat_bloc/chat_event.dart';
 import '../../business_logic/chat_bloc/chat_state.dart';
 import '../widgets/chat_bubble.dart';
-import '../widgets/sidebar_history.dart'; // Import Sidebar yang baru dibuat
+import '../widgets/sidebar_history.dart';
 
 class HomeChatScreen extends StatefulWidget {
   const HomeChatScreen({super.key});
@@ -132,13 +132,29 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            FloatingActionButton(
-                              onPressed: _sendMessage,
-                              backgroundColor: Colors.teal,
-                              child: const Icon(
-                                Icons.send,
-                                color: Colors.white,
-                              ),
+
+                            // 3. TOMBOL DINAMIS (Bisa Kirim, Bisa Stop)
+                            BlocBuilder<ChatBloc, ChatState>(
+                              builder: (context, state) {
+                                // Cek apakah AI lagi ngetik?
+                                bool isStreaming = state is ChatStreaming;
+
+                                return FloatingActionButton(
+                                  // Kalau lagi ngetik, tombol ini jadi rem. Kalau nggak, jadi pengirim pesan.
+                                  onPressed: isStreaming
+                                      ? () => context.read<ChatBloc>().add(
+                                          StopGenerationEvent(),
+                                        )
+                                      : _sendMessage,
+                                  backgroundColor: isStreaming
+                                      ? Colors.red
+                                      : Colors.teal,
+                                  child: Icon(
+                                    isStreaming ? Icons.stop : Icons.send,
+                                    color: Colors.white,
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),
