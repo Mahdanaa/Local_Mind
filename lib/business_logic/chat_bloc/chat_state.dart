@@ -1,22 +1,28 @@
-abstract class ChatState {}
+import '../../data/models/chat_message.dart';
 
-// Tampilan awal (kosong)
-class ChatInitial extends ChatState {}
-
-// Saat nunggu AI mikir (Muncul animasi muter/loading)
-class ChatLoading extends ChatState {}
-
-// Saat AI lagi ngetik kata per kata
-class ChatStreaming extends ChatState {
-  final String textSoFar;
-  ChatStreaming(this.textSoFar);
+abstract class ChatState {
+  final List<ChatMessage> messages;
+  ChatState(this.messages);
 }
 
-// Saat AI udah selesai ngetik
-class ChatSuccess extends ChatState {}
+class ChatInitial extends ChatState {
+  ChatInitial() : super([]); // Awalnya kosong
+}
 
-// Saat ada masalah (Ollama mati, dll)
+class ChatLoading extends ChatState {
+  ChatLoading(super.messages);
+}
+
+class ChatStreaming extends ChatState {
+  final String textSoFar;
+  ChatStreaming(super.messages, this.textSoFar);
+}
+
+class ChatSuccess extends ChatState {
+  ChatSuccess(super.messages);
+}
+
 class ChatError extends ChatState {
   final String errorMessage;
-  ChatError(this.errorMessage);
+  ChatError(super.messages, this.errorMessage);
 }

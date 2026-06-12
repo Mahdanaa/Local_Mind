@@ -9,14 +9,16 @@ import 'chat_state.dart';
 class ChatBloc extends Bloc<ChatEvent, ChatState> {
   final LlmRepository _repository;
   final DatabaseHelper _dbHelper;
-  final _uuid = const Uuid(); // Buat bikin ID unik acak
+  final _uuid = const Uuid();
 
   ChatBloc(this._repository, this._dbHelper) : super(ChatInitial()) {
-    // ATURAN 1: Kalau ada yang ngirim pesan (SendMessageEvent)
     on<SendMessageEvent>((event, emit) async {
-      emit(ChatLoading()); // Kasih tau UI buat tampilin loading
+      // 1. Ambil riwayat chat lama dari Brankas
+      final existingMessages = await _dbHelper.getMessagesBySession(
+        event.sessionId,
+      );
 
-      // 1. Simpan pesan User ke Database
+      // 2. Bikin pesan user & simpan
       final userMsg = ChatMessage(
         id: _uuid.v4(),
         sessionId: event.sessionId,
@@ -24,24 +26,25 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         content: event.text,
       );
       await _dbHelper.insertMessage(userMsg);
+      existingMessages.add(userMsg); // Tambahkan ke daftar tampilan
+
+      emit(ChatLoading(existingMessages)); // Tampilkan UI loading
 
       try {
-        // 2. Minta AI mikir (Streaming)
         final stream = _repository.streamChat(event.text, event.modelName);
         String fullAiResponse = "";
 
-        // 3. Tangkap kata per kata dan laporkan ke UI (ChatStreaming)
+        // 3. Streaming kata per kata
         await emit.forEach(
           stream,
           onData: (String chunk) {
             fullAiResponse += chunk;
-            return ChatStreaming(
-              fullAiResponse,
-            ); // UI akan otomatis update tiap ada kata baru!
+            // Kirim riwayat lama + teks yang lagi diketik AI
+            return ChatStreaming(existingMessages, fullAiResponse);
           },
         );
 
-        // 4. Kalau udah selesai ngetik, simpan balasan AI ke Database
+        // 4. Selesai ngetik, simpan pesan AI
         final aiMsg = ChatMessage(
           id: _uuid.v4(),
           sessionId: event.sessionId,
@@ -49,17 +52,18 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           content: fullAiResponse,
         );
         await _dbHelper.insertMessage(aiMsg);
+        existingMessages.add(aiMsg);
 
-        emit(ChatSuccess()); // Kasih tau UI kalau tugas selesai
+        // 5. Berhasil! Tampilkan semua riwayat
+        emit(ChatSuccess(existingMessages));
       } catch (e) {
-        emit(ChatError(e.toString()));
+        emit(ChatError(existingMessages, e.toString()));
       }
     });
 
-    // ATURAN 2: Kalau user klik Stop (StopGenerationEvent)
     on<StopGenerationEvent>((event, emit) {
       _repository.cancelGeneration();
-      emit(ChatSuccess()); // Anggap aja selesai secara paksa
+      emit(ChatSuccess(state.messages)); // Tetap pertahankan chat yang ada
     });
   }
 }
