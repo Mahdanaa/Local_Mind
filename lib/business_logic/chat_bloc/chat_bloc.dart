@@ -65,5 +65,16 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       _repository.cancelGeneration();
       emit(ChatSuccess(state.messages)); // Tetap pertahankan chat yang ada
     });
+
+    // ATURAN 3: Kalau user pindah ruang chat, muat riwayat lamanya
+    on<LoadChatHistory>((event, emit) async {
+      emit(ChatLoading([])); // Kosongkan meja sementara loading
+      try {
+        final messages = await _dbHelper.getMessagesBySession(event.sessionId);
+        emit(ChatSuccess(messages)); // Taruh piring pesan lama ke meja
+      } catch (e) {
+        emit(ChatError(state.messages, e.toString()));
+      }
+    });
   }
 }

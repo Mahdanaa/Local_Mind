@@ -15,3 +15,9 @@ class SendMessageEvent extends ChatEvent {
 
 // Saat user menekan tombol "Stop"
 class StopGenerationEvent extends ChatEvent {}
+
+// Perintah untuk memuat riwayat obrolan dari sesi tertentu
+class LoadChatHistory extends ChatEvent {
+  final String sessionId;
+  LoadChatHistory(this.sessionId);
+}
