@@ -52,7 +52,6 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
         if (mounted) {
           setState(() {
             _availableModels = models.map((m) => m['name'].toString()).toList();
-
             if (_availableModels.isNotEmpty) {
               _currentModel = _availableModels.first;
             }
@@ -75,220 +74,272 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
     return Scaffold(
       body: Row(
         children: [
-          Container(
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 250),
+            curve: Curves.easeInOut,
             width: _sidebarWidth,
             color: Colors.grey[50],
             child: ClipRect(
               child: _sidebarWidth > 0
-                  ? SidebarHistory(
-                      currentSessionId: _currentSessionId,
-                      onSessionSelected: (String sessionId) {
-                        setState(() {
-                          _currentSessionId = sessionId;
-                        });
-                        context.read<ChatBloc>().add(
-                          LoadChatHistory(sessionId),
-                        );
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(
+                            left: 16.0,
+                            top: 16.0,
+                            bottom: 8.0,
+                            right: 12.0,
+                          ),
+                          child: SingleChildScrollView(
+                            scrollDirection: Axis.horizontal,
+                            physics: const NeverScrollableScrollPhysics(),
+                            child: SizedBox(
+                              width: 250 - 28.0,
+                              child: Row(
+                                children: [
+                                  Image.asset(
+                                    'assets/images/logo.png',
+                                    width: 28,
+                                    height: 28,
+                                    fit: BoxFit.contain,
+                                  ),
+                                  const SizedBox(width: 12),
+                                  const Text(
+                                    'LocalMind',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                  const Spacer(),
+                                  IconButton(
+                                    icon: const Icon(
+                                      Icons.menu_open,
+                                      color: Colors.grey,
+                                    ),
+                                    tooltip: 'Tutup Sidebar',
+                                    onPressed: () {
+                                      setState(() {
+                                        _sidebarWidth = 0.0;
+                                      });
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
 
-                        _messageFocusNode.requestFocus();
-                      },
+                        Expanded(
+                          child: SidebarHistory(
+                            currentSessionId: _currentSessionId,
+                            onSessionSelected: (String sessionId) {
+                              setState(() {
+                                _currentSessionId = sessionId;
+                              });
+                              context.read<ChatBloc>().add(
+                                LoadChatHistory(sessionId),
+                              );
+                              _messageFocusNode.requestFocus();
+                            },
+                          ),
+                        ),
+                      ],
                     )
                   : const SizedBox(),
             ),
           ),
 
-          MouseRegion(
-            cursor: SystemMouseCursors.resizeColumn,
-            child: GestureDetector(
-              onDoubleTap: () {
-                setState(() {
-                  _sidebarWidth = _sidebarWidth == 0 ? 280.0 : 0.0;
-                });
-              },
-              onPanUpdate: (details) {
-                setState(() {
-                  _sidebarWidth += details.delta.dx;
-                  if (_sidebarWidth < 0) _sidebarWidth = 0;
-                  if (_sidebarWidth > 280) _sidebarWidth = 280;
-                });
-              },
-              child: Container(
-                width: 12,
-                color: Colors.transparent,
-                child: Center(
-                  child: Container(
-                    height: 40,
-                    width: 4,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[400],
-                      borderRadius: BorderRadius.circular(4),
+          Expanded(
+            child: Column(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border(
+                      bottom: BorderSide(color: Colors.grey[200]!),
                     ),
                   ),
-                ),
-              ),
-            ),
-          ),
-
-          Expanded(
-            child: _currentSessionId == null
-                ? const Center(
-                    child: Text('Pilih atau buat obrolan baru di sidebar'),
-                  )
-                : Column(
+                  child: Row(
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 8,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          border: Border(
-                            bottom: BorderSide(color: Colors.grey[200]!),
+                      if (_sidebarWidth == 0) ...[
+                        IconButton(
+                          icon: Image.asset(
+                            'assets/images/logo.png',
+                            width: 28,
+                            height: 28,
+                            fit: BoxFit.contain,
                           ),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.smart_toy, color: Colors.teal),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Koki AI: ',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(width: 8),
-                            _isLoadingModels
-                                ? const SizedBox(
-                                    height: 16,
-                                    width: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : _availableModels.isEmpty
-                                ? const Text(
-                                    'Ollama Mati / Kosong!',
-                                    style: TextStyle(color: Colors.red),
-                                  )
-                                : DropdownButton<String>(
-                                    value: _currentModel,
-                                    underline: const SizedBox(),
-                                    items: _availableModels.map((String model) {
-                                      return DropdownMenuItem<String>(
-                                        value: model,
-                                        child: Text(model),
-                                      );
-                                    }).toList(),
-                                    onChanged: (String? newValue) {
-                                      if (newValue != null) {
-                                        setState(() {
-                                          _currentModel = newValue;
-                                        });
-                                      }
-                                    },
-                                  ),
-                          ],
-                        ),
-                      ),
-
-                      Expanded(
-                        child: BlocBuilder<ChatBloc, ChatState>(
-                          builder: (context, state) {
-                            List<Widget> chatBubbles = state.messages
-                                .map<Widget>((msg) {
-                                  return ChatBubble(
-                                    text: msg.content,
-                                    isUser: msg.isUser,
-                                  );
-                                })
-                                .toList();
-
-                            if (state is ChatStreaming) {
-                              chatBubbles.add(
-                                ChatBubble(
-                                  text: state.textSoFar,
-                                  isUser: false,
-                                ),
-                              );
-                            } else if (state is ChatLoading) {
-                              chatBubbles.add(
-                                const Padding(
-                                  padding: EdgeInsets.all(16.0),
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: CircularProgressIndicator(),
-                                  ),
-                                ),
-                              );
-                            } else if (state is ChatError) {
-                              chatBubbles.add(
-                                Center(
-                                  child: Text(
-                                    'Error: ${state.errorMessage}',
-                                    style: const TextStyle(color: Colors.red),
-                                  ),
-                                ),
-                              );
-                            }
-
-                            if (chatBubbles.isEmpty) {
-                              return const Center(
-                                child: Text(
-                                  'Mulai obrolan dengan mengetik di bawah!',
-                                ),
-                              );
-                            }
-
-                            return ListView(
-                              padding: const EdgeInsets.all(16),
-                              children: chatBubbles,
-                            );
+                          tooltip: 'Buka Sidebar',
+                          onPressed: () {
+                            setState(() {
+                              _sidebarWidth = 280.0;
+                            });
                           },
                         ),
-                      ),
+                      ] else ...[
+                        const Icon(Icons.smart_toy, color: Colors.teal),
+                        const SizedBox(width: 8),
+                        const Text(
+                          'Model AI: ',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        const SizedBox(width: 8),
+                        _isLoadingModels
+                            ? const SizedBox(
+                                height: 16,
+                                width: 16,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : _availableModels.isEmpty
+                            ? const Text(
+                                'Ollama Mati / Kosong!',
+                                style: TextStyle(color: Colors.red),
+                              )
+                            : DropdownButton<String>(
+                                value: _currentModel,
+                                underline: const SizedBox(),
+                                items: _availableModels.map((String model) {
+                                  return DropdownMenuItem<String>(
+                                    value: model,
+                                    child: Text(model),
+                                  );
+                                }).toList(),
+                                onChanged: (String? newValue) {
+                                  if (newValue != null) {
+                                    setState(() {
+                                      _currentModel = newValue;
+                                    });
+                                  }
+                                },
+                              ),
+                      ],
+                    ],
+                  ),
+                ),
 
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        color: Colors.white,
-                        child: Row(
+                Expanded(
+                  child: _currentSessionId == null
+                      ? const Center(
+                          child: Text(
+                            '👈 Buka sidebar dan pilih/buat obrolan baru',
+                          ),
+                        )
+                      : Column(
                           children: [
                             Expanded(
-                              child: TextField(
-                                controller: _textController,
-                                focusNode: _messageFocusNode,
-                                decoration: const InputDecoration(
-                                  hintText: 'Tanya sesuatu ke AI lokal...',
-                                  border: OutlineInputBorder(),
-                                ),
-                                onSubmitted: (val) => _sendMessage(),
+                              child: BlocBuilder<ChatBloc, ChatState>(
+                                builder: (context, state) {
+                                  List<Widget> chatBubbles = state.messages
+                                      .map<Widget>((msg) {
+                                        return ChatBubble(
+                                          text: msg.content,
+                                          isUser: msg.isUser,
+                                        );
+                                      })
+                                      .toList();
+
+                                  if (state is ChatStreaming) {
+                                    chatBubbles.add(
+                                      ChatBubble(
+                                        text: state.textSoFar,
+                                        isUser: false,
+                                      ),
+                                    );
+                                  } else if (state is ChatLoading) {
+                                    chatBubbles.add(
+                                      const Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: CircularProgressIndicator(),
+                                        ),
+                                      ),
+                                    );
+                                  } else if (state is ChatError) {
+                                    chatBubbles.add(
+                                      Center(
+                                        child: Text(
+                                          'Error: ${state.errorMessage}',
+                                          style: const TextStyle(
+                                            color: Colors.red,
+                                          ),
+                                        ),
+                                      ),
+                                    );
+                                  }
+
+                                  if (chatBubbles.isEmpty) {
+                                    return const Center(
+                                      child: Text(
+                                        'Mulai obrolan dengan mengetik di bawah!',
+                                      ),
+                                    );
+                                  }
+
+                                  return ListView(
+                                    padding: const EdgeInsets.all(16),
+                                    children: chatBubbles,
+                                  );
+                                },
                               ),
                             ),
-                            const SizedBox(width: 12),
-                            BlocBuilder<ChatBloc, ChatState>(
-                              builder: (context, state) {
-                                bool isBusy =
-                                    state is ChatStreaming ||
-                                    state is ChatLoading;
-                                return FloatingActionButton(
-                                  onPressed: isBusy
-                                      ? () => context.read<ChatBloc>().add(
-                                          StopGenerationEvent(),
-                                        )
-                                      : _sendMessage,
-                                  backgroundColor: isBusy
-                                      ? Colors.red
-                                      : Colors.teal,
-                                  child: Icon(
-                                    isBusy ? Icons.stop : Icons.send,
-                                    color: Colors.white,
+
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              color: Colors.white,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _textController,
+                                      focusNode: _messageFocusNode,
+                                      decoration: const InputDecoration(
+                                        hintText:
+                                            'Tanya sesuatu ke AI lokal...',
+                                        border: OutlineInputBorder(),
+                                      ),
+                                      onSubmitted: (val) => _sendMessage(),
+                                    ),
                                   ),
-                                );
-                              },
+                                  const SizedBox(width: 12),
+                                  BlocBuilder<ChatBloc, ChatState>(
+                                    builder: (context, state) {
+                                      bool isBusy =
+                                          state is ChatStreaming ||
+                                          state is ChatLoading;
+                                      return FloatingActionButton(
+                                        onPressed: isBusy
+                                            ? () => context
+                                                  .read<ChatBloc>()
+                                                  .add(StopGenerationEvent())
+                                            : _sendMessage,
+                                        backgroundColor: isBusy
+                                            ? Colors.red
+                                            : Colors.teal,
+                                        child: Icon(
+                                          isBusy ? Icons.stop : Icons.send,
+                                          color: Colors.white,
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
                             ),
                           ],
                         ),
-                      ),
-                    ],
-                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),
