@@ -10,7 +10,6 @@ class ChatBubble extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Align(
-      // Kalau user di kanan, kalau AI di kiri
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
         margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
@@ -26,15 +25,10 @@ class ChatBubble extends StatelessWidget {
             ),
           ],
         ),
-        // Batasi lebar maksimal biar nggak kepanjangan
         constraints: BoxConstraints(
           maxWidth: MediaQuery.of(context).size.width * 0.6,
         ),
-        // Tukang Plating: Render teks biasa jadi Markdown cantik
-        child: MarkdownBody(
-          data: text,
-          selectable: true, // Biar teksnya bisa di-copy paste!
-        ),
+        child: MarkdownBody(data: text, selectable: true),
       ),
     );
   }

@@ -1,4 +1,3 @@
-// Inheritance: Mewarisi class Exception bawaan Dart
 class OllamaOfflineException implements Exception {
   final String message;
   OllamaOfflineException([

@@ -10,19 +10,16 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final _uuid = const Uuid();
 
   SessionBloc(this._dbHelper) : super(SessionInitial()) {
-    // ATURAN 1: Kalau disuruh muat semua history
     on<LoadAllSessions>((event, emit) async {
       emit(SessionLoading());
       try {
-        // Ambil data dari brankas
         final sessions = await _dbHelper.getAllSessions();
-        emit(SessionLoaded(sessions)); // Kasih datanya ke UI Sidebar
+        emit(SessionLoaded(sessions));
       } catch (e) {
         emit(SessionError(e.toString()));
       }
     });
 
-    // ATURAN 2: Kalau ada user nge-klik "New Chat"
     on<CreateNewSession>((event, emit) async {
       try {
         final newSession = ChatSession(
@@ -32,15 +29,25 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
           createdAt: DateTime.now().millisecondsSinceEpoch,
         );
 
-        // Simpan map folder baru ke brankas
         await _dbHelper.insertSession(newSession);
 
-        // Setelah berhasil disimpan, otomatis panggil ATURAN 1
-        // Biar sidebar-nya ke-refresh sendiri!
         add(LoadAllSessions());
       } catch (e) {
         emit(SessionError(e.toString()));
       }
     });
+    on<DeleteSession>((event, emit) async {
+      await _dbHelper.deleteSession(event.sessionId);
+      add(LoadAllSessions());
+    });
+    on<RenameSession>((event, emit) async {
+      await _dbHelper.updateSessionTitle(event.sessionId, event.newTitle);
+      add(LoadAllSessions());
+    });
   }
+}
+
+class DeleteSession extends SessionEvent {
+  final String sessionId;
+  DeleteSession(this.sessionId);
 }

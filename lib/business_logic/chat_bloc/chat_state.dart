@@ -6,7 +6,7 @@ abstract class ChatState {
 }
 
 class ChatInitial extends ChatState {
-  ChatInitial() : super([]); // Awalnya kosong
+  ChatInitial() : super([]);
 }
 
 class ChatLoading extends ChatState {

@@ -8,10 +8,8 @@ import 'business_logic/session_bloc/session_event.dart';
 import 'presentation/screens/home_chat_screen.dart';
 
 void main() async {
-  // Wajib dipanggil kalau kita pakai SQLite/C++ di desktop
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 1. Siapkan Dapur & Kabel AI
   final dbHelper = DatabaseHelper();
   final llmRepository = OllamaRepositoryImpl();
 
@@ -26,11 +24,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 2. Pasang Manajer (BLoC) di seluruh aplikasi
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          // Bikin SessionBloc & langsung suruh Load data dari SQLite
           create: (context) => SessionBloc(dbHelper)..add(LoadAllSessions()),
         ),
         BlocProvider(create: (context) => ChatBloc(llmRepository, dbHelper)),

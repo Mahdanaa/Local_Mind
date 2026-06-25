@@ -6,7 +6,6 @@ class SessionInitial extends SessionState {}
 
 class SessionLoading extends SessionState {}
 
-// Saat resepsionis berhasil ngambil buku tamu dari SQLite
 class SessionLoaded extends SessionState {
   final List<ChatSession> sessions;
   SessionLoaded(this.sessions);

@@ -31,14 +31,12 @@ class OllamaRepositoryImpl implements LlmRepository {
     final request = http.Request('POST', Uri.parse('$baseUrl/api/generate'));
     request.headers['Content-Type'] = 'application/json';
 
-    // Susun isi tas kurir
     Map<String, dynamic> bodyData = {
       'model': model,
       'prompt': prompt,
       'stream': true,
     };
 
-    // ✅ Kalau ada buku karakter, masukin ke tas!
     if (systemPrompt != null && systemPrompt.isNotEmpty) {
       bodyData['system'] = systemPrompt;
     }

@@ -17,7 +17,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         event.sessionId,
       );
 
-      // 1. AUTO-TITLE
       if (existingMessages.isEmpty) {
         String generatedTitle = event.text.length > 30
             ? '${event.text.substring(0, 30)}...'
@@ -26,7 +25,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
         await _dbHelper.updateSessionTitle(event.sessionId, generatedTitle);
       }
 
-      // 2. SIMPAN PESAN USER
       final userMsg = ChatMessage(
         id: _uuid.v4(),
         sessionId: event.sessionId,
@@ -39,20 +37,17 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
       emit(ChatLoading(existingMessages));
 
       try {
-        // ✅ 3. NGINTIP KARAKTER DARI BRANKAS
         final sessionInfo = await _dbHelper.getSessionById(event.sessionId);
         final karakterAi = sessionInfo?.systemPrompt;
 
-        // ✅ 4. KASIH KARAKTERNYA KE KURIR AI
         final stream = _repository.streamChat(
           event.text,
           event.modelName,
-          systemPrompt: karakterAi, // Berikan karakternya ke Ollama!
+          systemPrompt: karakterAi,
         );
 
         String fullAiResponse = "";
 
-        // 5. STREAMING BALASAN AI
         await emit.forEach(
           stream,
           onData: (String chunk) {
@@ -61,7 +56,6 @@ class ChatBloc extends Bloc<ChatEvent, ChatState> {
           },
         );
 
-        // 6. SIMPAN PESAN AI
         final aiMsg = ChatMessage(
           id: _uuid.v4(),
           sessionId: event.sessionId,

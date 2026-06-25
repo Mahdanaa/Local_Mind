@@ -2,8 +2,7 @@ class ChatSession {
   final String id;
   final String title;
   final String systemPrompt;
-  final int
-  createdAt; // Simpan waktu pakai angka (timestamp) biar gampang dibaca SQLite
+  final int createdAt;
 
   const ChatSession({
     required this.id,
@@ -12,7 +11,6 @@ class ChatSession {
     required this.createdAt,
   });
 
-  // Mapping untuk menyimpan ke SQLite secara ketat (tanpa dynamic)
   Map<String, Object?> toMap() {
     return {
       'id': id,
@@ -24,7 +22,6 @@ class ChatSession {
 
   factory ChatSession.fromMap(Map<String, Object?> map) {
     return ChatSession(
-      // Buka koper dan pastikan isinya sesuai (Casting ketat)
       id: map['id'] as String,
       title: map['title'] as String,
       systemPrompt: map['system_prompt'] as String,

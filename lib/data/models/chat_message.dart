@@ -1,7 +1,7 @@
 class ChatMessage {
   final String id;
   final String sessionId;
-  final String role; // Isinya cuma 'user' atau 'assistant'
+  final String role;
   final String content;
 
   const ChatMessage({
@@ -11,11 +11,9 @@ class ChatMessage {
     required this.content,
   });
 
-  // Encapsulation: Membungkus logika pengecekan di dalam class
   bool get isUser => role == 'user';
   bool get isAssistant => role == 'assistant';
 
-  // Mapping untuk masuk/keluar dari SQLite menggunakan Object? yang sangat ketat
   Map<String, Object?> toMap() {
     return {
       'id': id,
@@ -27,7 +25,6 @@ class ChatMessage {
 
   factory ChatMessage.fromMap(Map<String, Object?> map) {
     return ChatMessage(
-      // Kita "buka koper" dan pastikan isinya String (Casting)
       id: map['id'] as String,
       sessionId: map['session_id'] as String,
       role: map['role'] as String,

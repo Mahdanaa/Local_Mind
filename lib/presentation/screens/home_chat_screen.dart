@@ -1,3 +1,5 @@
+import 'dart:convert';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:local_mind/business_logic/session_bloc/session_bloc.dart';
@@ -17,49 +19,177 @@ class HomeChatScreen extends StatefulWidget {
 
 class _HomeChatScreenState extends State<HomeChatScreen> {
   final TextEditingController _textController = TextEditingController();
-  final String _currentModel = 'qwen2.5:0.5b';
+  final FocusNode _messageFocusNode = FocusNode();
+
   String? _currentSessionId;
+  double _sidebarWidth = 280.0;
+  String _currentModel = '';
+  List<String> _availableModels = [];
+  bool _isLoadingModels = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchLocalModels();
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    _messageFocusNode.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchLocalModels() async {
+    try {
+      final response = await http.get(
+        Uri.parse('http://localhost:11434/api/tags'),
+      );
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final List<dynamic> models = data['models'];
+
+        if (mounted) {
+          setState(() {
+            _availableModels = models.map((m) => m['name'].toString()).toList();
+
+            if (_availableModels.isNotEmpty) {
+              _currentModel = _availableModels.first;
+            }
+            _isLoadingModels = false;
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _availableModels = [];
+          _isLoadingModels = false;
+        });
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: Row(
         children: [
-          // ==========================
-          // KIRI: Sidebar Resepsionis
-          // ==========================
-          Expanded(
-            flex: 2,
-            child: Container(
-              color: Colors
-                  .grey[50], // Diperlembut warnanya biar blok teal-nya kontras
-              child: SidebarHistory(
-                currentSessionId:
-                    _currentSessionId, // ✅ SEKARANG DIKIRIM KE SIDEBAR
-                onSessionSelected: (String sessionId) {
-                  setState(() {
-                    _currentSessionId = sessionId;
-                  });
-                  context.read<ChatBloc>().add(LoadChatHistory(sessionId));
-                },
+          Container(
+            width: _sidebarWidth,
+            color: Colors.grey[50],
+            child: ClipRect(
+              child: _sidebarWidth > 0
+                  ? SidebarHistory(
+                      currentSessionId: _currentSessionId,
+                      onSessionSelected: (String sessionId) {
+                        setState(() {
+                          _currentSessionId = sessionId;
+                        });
+                        context.read<ChatBloc>().add(
+                          LoadChatHistory(sessionId),
+                        );
+
+                        _messageFocusNode.requestFocus();
+                      },
+                    )
+                  : const SizedBox(),
+            ),
+          ),
+
+          MouseRegion(
+            cursor: SystemMouseCursors.resizeColumn,
+            child: GestureDetector(
+              onDoubleTap: () {
+                setState(() {
+                  _sidebarWidth = _sidebarWidth == 0 ? 280.0 : 0.0;
+                });
+              },
+              onPanUpdate: (details) {
+                setState(() {
+                  _sidebarWidth += details.delta.dx;
+                  if (_sidebarWidth < 0) _sidebarWidth = 0;
+                  if (_sidebarWidth > 280) _sidebarWidth = 280;
+                });
+              },
+              child: Container(
+                width: 12,
+                color: Colors.transparent,
+                child: Center(
+                  child: Container(
+                    height: 40,
+                    width: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ),
               ),
             ),
           ),
 
-          const VerticalDivider(width: 1, thickness: 1),
-
-          // ==========================
-          // KANAN: Chat Area
-          // ==========================
           Expanded(
-            flex: 5,
             child: _currentSessionId == null
                 ? const Center(
-                    child: Text('👈 Pilih atau buat obrolan baru di sidebar'),
+                    child: Text('Pilih atau buat obrolan baru di sidebar'),
                   )
                 : Column(
                     children: [
-                      // 1. AREA TAMPILAN BALON CHAT
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 8,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          border: Border(
+                            bottom: BorderSide(color: Colors.grey[200]!),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.smart_toy, color: Colors.teal),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Koki AI: ',
+                              style: TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(width: 8),
+                            _isLoadingModels
+                                ? const SizedBox(
+                                    height: 16,
+                                    width: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : _availableModels.isEmpty
+                                ? const Text(
+                                    'Ollama Mati / Kosong!',
+                                    style: TextStyle(color: Colors.red),
+                                  )
+                                : DropdownButton<String>(
+                                    value: _currentModel,
+                                    underline: const SizedBox(),
+                                    items: _availableModels.map((String model) {
+                                      return DropdownMenuItem<String>(
+                                        value: model,
+                                        child: Text(model),
+                                      );
+                                    }).toList(),
+                                    onChanged: (String? newValue) {
+                                      if (newValue != null) {
+                                        setState(() {
+                                          _currentModel = newValue;
+                                        });
+                                      }
+                                    },
+                                  ),
+                          ],
+                        ),
+                      ),
+
                       Expanded(
                         child: BlocBuilder<ChatBloc, ChatState>(
                           builder: (context, state) {
@@ -103,7 +233,7 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                             if (chatBubbles.isEmpty) {
                               return const Center(
                                 child: Text(
-                                  'Meja bersih. Silakan mulai ngobrol!',
+                                  'Mulai obrolan dengan mengetik di bawah!',
                                 ),
                               );
                             }
@@ -116,7 +246,6 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                         ),
                       ),
 
-                      // 2. AREA INPUT TEKS
                       Container(
                         padding: const EdgeInsets.all(16),
                         color: Colors.white,
@@ -125,6 +254,7 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                             Expanded(
                               child: TextField(
                                 controller: _textController,
+                                focusNode: _messageFocusNode,
                                 decoration: const InputDecoration(
                                   hintText: 'Tanya sesuatu ke AI lokal...',
                                   border: OutlineInputBorder(),
@@ -133,23 +263,22 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                               ),
                             ),
                             const SizedBox(width: 12),
-
-                            // 3. TOMBOL DINAMIS (Bisa Kirim, Bisa Stop)
                             BlocBuilder<ChatBloc, ChatState>(
                               builder: (context, state) {
-                                bool isStreaming = state is ChatStreaming;
-
+                                bool isBusy =
+                                    state is ChatStreaming ||
+                                    state is ChatLoading;
                                 return FloatingActionButton(
-                                  onPressed: isStreaming
+                                  onPressed: isBusy
                                       ? () => context.read<ChatBloc>().add(
                                           StopGenerationEvent(),
                                         )
                                       : _sendMessage,
-                                  backgroundColor: isStreaming
+                                  backgroundColor: isBusy
                                       ? Colors.red
                                       : Colors.teal,
                                   child: Icon(
-                                    isStreaming ? Icons.stop : Icons.send,
+                                    isBusy ? Icons.stop : Icons.send,
                                     color: Colors.white,
                                   ),
                                 );
@@ -171,9 +300,22 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
       return;
     }
 
+    final String userMessage = _textController.text.trim();
+
+    final chatState = context.read<ChatBloc>().state;
+    if (chatState.messages.isEmpty) {
+      String newTitle = userMessage.length > 25
+          ? '${userMessage.substring(0, 25)}...'
+          : userMessage;
+
+      context.read<SessionBloc>().add(
+        RenameSession(sessionId: _currentSessionId!, newTitle: newTitle),
+      );
+    }
+
     context.read<ChatBloc>().add(
       SendMessageEvent(
-        text: _textController.text,
+        text: userMessage,
         modelName: _currentModel,
         sessionId: _currentSessionId!,
       ),
@@ -181,5 +323,7 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
 
     context.read<SessionBloc>().add(LoadAllSessions());
     _textController.clear();
+
+    _messageFocusNode.requestFocus();
   }
 }

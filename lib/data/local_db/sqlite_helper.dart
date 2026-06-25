@@ -4,7 +4,6 @@ import '../models/chat_message.dart';
 import '../models/chat_session.dart';
 
 class DatabaseHelper {
-  // 1. Menerapkan Singleton Pattern (Biar brankas cuma ada 1 pintu)
   static final DatabaseHelper _instance = DatabaseHelper._internal();
   static Database? _database;
 
@@ -14,7 +13,6 @@ class DatabaseHelper {
 
   DatabaseHelper._internal();
 
-  // 2. Membuka koneksi ke brankas
   Future<Database> get database async {
     if (_database != null) return _database!;
     _database = await _initDatabase();
@@ -22,7 +20,6 @@ class DatabaseHelper {
   }
 
   Future<Database> _initDatabase() async {
-    // Pelumas khusus untuk Windows Desktop
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
 
@@ -32,9 +29,7 @@ class DatabaseHelper {
     return await openDatabase(path, version: 1, onCreate: _onCreate);
   }
 
-  // 3. Membuat sekat-sekat di dalam brankas (Tabel)
   Future<void> _onCreate(Database db, int version) async {
-    // Tabel untuk menyimpan Map Folder (Sesi Chat)
     await db.execute('''
       CREATE TABLE sessions (
         id TEXT PRIMARY KEY,
@@ -44,7 +39,6 @@ class DatabaseHelper {
       )
     ''');
 
-    // Tabel untuk menyimpan Kertas Surat (Pesan)
     await db.execute('''
       CREATE TABLE messages (
         id TEXT PRIMARY KEY,
@@ -56,11 +50,6 @@ class DatabaseHelper {
     ''');
   }
 
-  // ==========================================
-  // FUNGSI CRUD (Memasukkan & Mengambil Barang)
-  // ==========================================
-
-  // Simpan sesi baru
   Future<void> insertSession(ChatSession session) async {
     final db = await database;
     await db.insert(
@@ -70,7 +59,6 @@ class DatabaseHelper {
     );
   }
 
-  // Ambil semua sesi (untuk ditampilkan di Sidebar)
   Future<List<ChatSession>> getAllSessions() async {
     final db = await database;
     final List<Map<String, Object?>> maps = await db.query(
@@ -80,7 +68,6 @@ class DatabaseHelper {
     return maps.map((map) => ChatSession.fromMap(map)).toList();
   }
 
-  // Simpan pesan baru
   Future<void> insertMessage(ChatMessage message) async {
     final db = await database;
     await db.insert(
@@ -90,19 +77,17 @@ class DatabaseHelper {
     );
   }
 
-  // Ambil semua pesan dalam satu sesi tertentu
   Future<List<ChatMessage>> getMessagesBySession(String sessionId) async {
     final db = await database;
     final List<Map<String, Object?>> maps = await db.query(
       'messages',
       where: 'session_id = ?',
       whereArgs: [sessionId],
-      orderBy: 'rowid ASC', //  Sekarang diurutkan pas insertion order!
+      orderBy: 'rowid ASC',
     );
     return maps.map((map) => ChatMessage.fromMap(map)).toList();
   }
 
-  // Fungsi baru: Update judul sesi (Auto-Title)
   Future<void> updateSessionTitle(String sessionId, String newTitle) async {
     final db = await database;
     await db.update(
@@ -113,7 +98,6 @@ class DatabaseHelper {
     );
   }
 
-  // ✅ Fungsi Baru: Ngintip karakter AI di meja tertentu
   Future<ChatSession?> getSessionById(String sessionId) async {
     final db = await database;
     final maps = await db.query(
@@ -125,6 +109,16 @@ class DatabaseHelper {
     if (maps.isNotEmpty) {
       return ChatSession.fromMap(maps.first);
     }
-    return null; // Kalau mejanya nggak ketemu
+    return null;
+  }
+
+  Future<void> deleteSession(String sessionId) async {
+    final db = await database;
+    await db.delete(
+      'messages',
+      where: 'session_id = ?',
+      whereArgs: [sessionId],
+    );
+    await db.delete('sessions', where: 'id = ?', whereArgs: [sessionId]);
   }
 }
