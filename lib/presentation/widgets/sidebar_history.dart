@@ -35,7 +35,7 @@ class SidebarHistory extends StatelessWidget {
                   labelText: 'System Prompt (Opsional)',
                   border: OutlineInputBorder(),
 
-                  hintText: 'Misal: Kamu adalah programmer ahli Flutter...',
+                  hintText: 'Misal: Jawab pertanyaan dengan bahasa Indonesia',
                 ),
               ),
             ],
