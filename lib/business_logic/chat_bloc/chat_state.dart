@@ -1,28 +1,83 @@
+import 'package:equatable/equatable.dart';
 import '../../data/models/chat_message.dart';
 
-abstract class ChatState {
+abstract class ChatState extends Equatable {
   final List<ChatMessage> messages;
-  ChatState(this.messages);
+  final List<String> availableModels;
+  final String selectedModel;
+
+  const ChatState({
+    this.messages = const [],
+    this.availableModels = const [],
+    this.selectedModel = '',
+  });
+
+  @override
+  List<Object?> get props => [messages, availableModels, selectedModel];
 }
 
 class ChatInitial extends ChatState {
-  ChatInitial() : super([]);
+  const ChatInitial() : super();
 }
 
 class ChatLoading extends ChatState {
-  ChatLoading(super.messages);
+  const ChatLoading({
+    required super.messages,
+    required super.availableModels,
+    required super.selectedModel,
+  });
 }
 
 class ChatStreaming extends ChatState {
   final String textSoFar;
-  ChatStreaming(super.messages, this.textSoFar);
+
+  const ChatStreaming({
+    required super.messages,
+    required super.availableModels,
+    required super.selectedModel,
+    required this.textSoFar,
+  });
+
+  @override
+  List<Object?> get props =>
+      [messages, availableModels, selectedModel, textSoFar];
 }
 
 class ChatSuccess extends ChatState {
-  ChatSuccess(super.messages);
+  const ChatSuccess({
+    required super.messages,
+    required super.availableModels,
+    required super.selectedModel,
+  });
 }
 
 class ChatError extends ChatState {
   final String errorMessage;
-  ChatError(super.messages, this.errorMessage);
+
+  const ChatError({
+    required super.messages,
+    required super.availableModels,
+    required super.selectedModel,
+    required this.errorMessage,
+  });
+
+  @override
+  List<Object?> get props =>
+      [messages, availableModels, selectedModel, errorMessage];
+}
+
+class ModelsLoaded extends ChatState {
+  const ModelsLoaded({
+    required super.availableModels,
+    required super.selectedModel,
+  });
+}
+
+class ModelsError extends ChatState {
+  final String errorMessage;
+
+  const ModelsError({required this.errorMessage});
+
+  @override
+  List<Object?> get props => [errorMessage];
 }

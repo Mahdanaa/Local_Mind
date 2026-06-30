@@ -27,7 +27,7 @@ class MyApp extends StatelessWidget {
     return MultiBlocProvider(
       providers: [
         BlocProvider(
-          create: (context) => SessionBloc(dbHelper)..add(LoadAllSessions()),
+          create: (context) => SessionBloc(dbHelper)..add(const LoadAllSessions()),
         ),
         BlocProvider(create: (context) => ChatBloc(llmRepository, dbHelper)),
       ],

@@ -1,17 +1,35 @@
+import 'package:equatable/equatable.dart';
 import '../../data/models/chat_session.dart';
 
-abstract class SessionState {}
+abstract class SessionState extends Equatable {
+  const SessionState();
 
-class SessionInitial extends SessionState {}
+  @override
+  List<Object?> get props => [];
+}
 
-class SessionLoading extends SessionState {}
+class SessionInitial extends SessionState {
+  const SessionInitial();
+}
+
+class SessionLoading extends SessionState {
+  const SessionLoading();
+}
 
 class SessionLoaded extends SessionState {
   final List<ChatSession> sessions;
-  SessionLoaded(this.sessions);
+
+  const SessionLoaded(this.sessions);
+
+  @override
+  List<Object?> get props => [sessions];
 }
 
 class SessionError extends SessionState {
   final String message;
-  SessionError(this.message);
+
+  const SessionError(this.message);
+
+  @override
+  List<Object?> get props => [message];
 }

@@ -1,5 +1,3 @@
-import 'dart:convert';
-import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:local_mind/business_logic/session_bloc/session_bloc.dart';
@@ -23,14 +21,11 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
 
   String? _currentSessionId;
   double _sidebarWidth = 280.0;
-  String _currentModel = '';
-  List<String> _availableModels = [];
-  bool _isLoadingModels = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchLocalModels();
+    context.read<ChatBloc>().add(const FetchModelsEvent());
   }
 
   @override
@@ -38,35 +33,6 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
     _textController.dispose();
     _messageFocusNode.dispose();
     super.dispose();
-  }
-
-  Future<void> _fetchLocalModels() async {
-    try {
-      final response = await http.get(
-        Uri.parse('http://localhost:11434/api/tags'),
-      );
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final List<dynamic> models = data['models'];
-
-        if (mounted) {
-          setState(() {
-            _availableModels = models.map((m) => m['name'].toString()).toList();
-            if (_availableModels.isNotEmpty) {
-              _currentModel = _availableModels.first;
-            }
-            _isLoadingModels = false;
-          });
-        }
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _availableModels = [];
-          _isLoadingModels = false;
-        });
-      }
-    }
   }
 
   @override
@@ -191,36 +157,58 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                           style: TextStyle(fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(width: 8),
-                        _isLoadingModels
-                            ? const SizedBox(
+                        BlocBuilder<ChatBloc, ChatState>(
+                          buildWhen: (ChatState previous, ChatState current) =>
+                              previous.availableModels !=
+                                  current.availableModels ||
+                              previous.selectedModel != current.selectedModel ||
+                              current is ModelsLoaded ||
+                              current is ModelsError,
+                          builder: (BuildContext context, ChatState state) {
+                            if (state is ChatInitial) {
+                              return const SizedBox(
                                 height: 16,
                                 width: 16,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
                                 ),
-                              )
-                            : _availableModels.isEmpty
-                            ? const Text(
+                              );
+                            }
+
+                            if (state is ModelsError) {
+                              return Text(
+                                'Ollama Mati: ${state.errorMessage}',
+                                style: const TextStyle(color: Colors.red),
+                              );
+                            }
+
+                            if (state.availableModels.isEmpty) {
+                              return const Text(
                                 'Ollama Mati / Kosong!',
                                 style: TextStyle(color: Colors.red),
-                              )
-                            : DropdownButton<String>(
-                                value: _currentModel,
-                                underline: const SizedBox(),
-                                items: _availableModels.map((String model) {
-                                  return DropdownMenuItem<String>(
-                                    value: model,
-                                    child: Text(model),
-                                  );
-                                }).toList(),
-                                onChanged: (String? newValue) {
-                                  if (newValue != null) {
-                                    setState(() {
-                                      _currentModel = newValue;
-                                    });
-                                  }
-                                },
-                              ),
+                              );
+                            }
+
+                            return DropdownButton<String>(
+                              value: state.selectedModel.isNotEmpty
+                                  ? state.selectedModel
+                                  : null,
+                              underline: const SizedBox(),
+                              items: state.availableModels.map((String model) {
+                                return DropdownMenuItem<String>(
+                                  value: model,
+                                  child: Text(model),
+                                );
+                              }).toList(),
+                              onChanged: (String? newValue) {
+                                if (newValue != null) {
+                                  _selectedModelOverride = newValue;
+                                  setState(() {});
+                                }
+                              },
+                            );
+                          },
+                        ),
                       ],
                     ],
                   ),
@@ -237,8 +225,9 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                           children: [
                             Expanded(
                               child: BlocBuilder<ChatBloc, ChatState>(
-                                builder: (context, state) {
-                                  List<Widget> chatBubbles = state.messages
+                                builder: (BuildContext context, ChatState state) {
+                                  final List<Widget> chatBubbles = state
+                                      .messages
                                       .map<Widget>((msg) {
                                         return ChatBubble(
                                           text: msg.content,
@@ -307,30 +296,37 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                                             'Tanya sesuatu ke AI lokal...',
                                         border: OutlineInputBorder(),
                                       ),
-                                      onSubmitted: (val) => _sendMessage(),
+                                      onSubmitted: (String val) =>
+                                          _sendMessage(),
                                     ),
                                   ),
                                   const SizedBox(width: 12),
                                   BlocBuilder<ChatBloc, ChatState>(
-                                    builder: (context, state) {
-                                      bool isBusy =
-                                          state is ChatStreaming ||
-                                          state is ChatLoading;
-                                      return FloatingActionButton(
-                                        onPressed: isBusy
-                                            ? () => context
-                                                  .read<ChatBloc>()
-                                                  .add(StopGenerationEvent())
-                                            : _sendMessage,
-                                        backgroundColor: isBusy
-                                            ? Colors.red
-                                            : Colors.teal,
-                                        child: Icon(
-                                          isBusy ? Icons.stop : Icons.send,
-                                          color: Colors.white,
-                                        ),
-                                      );
-                                    },
+                                    builder:
+                                        (
+                                          BuildContext context,
+                                          ChatState state,
+                                        ) {
+                                          final bool isBusy =
+                                              state is ChatStreaming ||
+                                              state is ChatLoading;
+                                          return FloatingActionButton(
+                                            onPressed: isBusy
+                                                ? () => context
+                                                      .read<ChatBloc>()
+                                                      .add(
+                                                        const StopGenerationEvent(),
+                                                      )
+                                                : _sendMessage,
+                                            backgroundColor: isBusy
+                                                ? Colors.red
+                                                : Colors.teal,
+                                            child: Icon(
+                                              isBusy ? Icons.stop : Icons.send,
+                                              color: Colors.white,
+                                            ),
+                                          );
+                                        },
                                   ),
                                 ],
                               ),
@@ -346,6 +342,12 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
     );
   }
 
+  String? _selectedModelOverride;
+  String get _currentModel {
+    final ChatState chatState = context.read<ChatBloc>().state;
+    return _selectedModelOverride ?? chatState.selectedModel;
+  }
+
   void _sendMessage() {
     if (_textController.text.trim().isEmpty || _currentSessionId == null) {
       return;
@@ -353,9 +355,9 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
 
     final String userMessage = _textController.text.trim();
 
-    final chatState = context.read<ChatBloc>().state;
+    final ChatState chatState = context.read<ChatBloc>().state;
     if (chatState.messages.isEmpty) {
-      String newTitle = userMessage.length > 25
+      final String newTitle = userMessage.length > 25
           ? '${userMessage.substring(0, 25)}...'
           : userMessage;
 
@@ -372,7 +374,7 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
       ),
     );
 
-    context.read<SessionBloc>().add(LoadAllSessions());
+    context.read<SessionBloc>().add(const LoadAllSessions());
     _textController.clear();
 
     _messageFocusNode.requestFocus();

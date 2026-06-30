@@ -9,11 +9,11 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
   final DatabaseHelper _dbHelper;
   final _uuid = const Uuid();
 
-  SessionBloc(this._dbHelper) : super(SessionInitial()) {
+  SessionBloc(this._dbHelper) : super(const SessionInitial()) {
     on<LoadAllSessions>((event, emit) async {
-      emit(SessionLoading());
+      emit(const SessionLoading());
       try {
-        final sessions = await _dbHelper.getAllSessions();
+        final List<ChatSession> sessions = await _dbHelper.getAllSessions();
         emit(SessionLoaded(sessions));
       } catch (e) {
         emit(SessionError(e.toString()));
@@ -22,7 +22,7 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
     on<CreateNewSession>((event, emit) async {
       try {
-        final newSession = ChatSession(
+        final ChatSession newSession = ChatSession(
           id: _uuid.v4(),
           title: event.title,
           systemPrompt: event.systemPrompt,
@@ -31,23 +31,20 @@ class SessionBloc extends Bloc<SessionEvent, SessionState> {
 
         await _dbHelper.insertSession(newSession);
 
-        add(LoadAllSessions());
+        add(const LoadAllSessions());
       } catch (e) {
         emit(SessionError(e.toString()));
       }
     });
+
     on<DeleteSession>((event, emit) async {
       await _dbHelper.deleteSession(event.sessionId);
-      add(LoadAllSessions());
+      add(const LoadAllSessions());
     });
+
     on<RenameSession>((event, emit) async {
       await _dbHelper.updateSessionTitle(event.sessionId, event.newTitle);
-      add(LoadAllSessions());
+      add(const LoadAllSessions());
     });
   }
-}
-
-class DeleteSession extends SessionEvent {
-  final String sessionId;
-  DeleteSession(this.sessionId);
 }

@@ -23,6 +23,10 @@ class ChatMessage {
     };
   }
 
+  Map<String, String> toApiMap() {
+    return {'role': role, 'content': content};
+  }
+
   factory ChatMessage.fromMap(Map<String, Object?> map) {
     return ChatMessage(
       id: map['id'] as String,

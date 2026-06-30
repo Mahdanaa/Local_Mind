@@ -1,9 +1,8 @@
+import '../models/chat_message.dart';
+
 abstract class LlmRepository {
   Future<List<String>> getAvailableModels();
-  Stream<String> streamChat(
-    String prompt,
-    String model, {
-    String? systemPrompt,
-  });
+  Stream<String> streamChat(List<ChatMessage> messages, String model);
+
   void cancelGeneration();
 }
