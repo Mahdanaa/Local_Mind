@@ -190,9 +190,10 @@ class _HomeChatScreenState extends State<HomeChatScreen> {
                             }
 
                             return DropdownButton<String>(
-                              value: state.selectedModel.isNotEmpty
-                                  ? state.selectedModel
-                                  : null,
+                              value: _selectedModelOverride ??
+                                  (state.selectedModel.isNotEmpty
+                                      ? state.selectedModel
+                                      : null),
                               underline: const SizedBox(),
                               items: state.availableModels.map((String model) {
                                 return DropdownMenuItem<String>(

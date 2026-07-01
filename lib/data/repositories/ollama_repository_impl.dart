@@ -17,8 +17,7 @@ class OllamaRepositoryImpl implements LlmRepository {
             jsonDecode(response.body) as Map<String, Object?>;
         final List<Object?> models = data['models'] as List<Object?>;
         return models
-            .map((Object? m) =>
-                (m as Map<String, Object?>)['name'] as String)
+            .map((Object? m) => (m as Map<String, Object?>)['name'] as String)
             .toList();
       }
       throw OllamaOfflineException();
@@ -44,9 +43,12 @@ class OllamaRepositoryImpl implements LlmRepository {
     try {
       final response = await _client.send(request);
 
-      await for (final String chunk in response.stream.transform(utf8.decoder)) {
-        final Iterable<String> lines =
-            chunk.split('\n').where((String line) => line.isNotEmpty);
+      await for (final String chunk in response.stream.transform(
+        utf8.decoder,
+      )) {
+        final Iterable<String> lines = chunk
+            .split('\n')
+            .where((String line) => line.isNotEmpty);
         for (final String line in lines) {
           final Map<String, Object?> data =
               jsonDecode(line) as Map<String, Object?>;
